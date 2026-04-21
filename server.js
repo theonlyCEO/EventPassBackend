@@ -109,16 +109,29 @@ const swaggerDocs = swaggerJsDoc(swaggerOptions);
 // MIDDLEWARE SETUP
 // ============================================
 // CORS must come BEFORE other middleware
+// Dynamic CORS configuration for production
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+    ? [process.env.FRONTEND_URL || 'https://your-frontend-url.onrender.com']
+    : ['http://localhost:5173', 'http://localhost:3000'];
+
 app.use(cors({
-    origin: 'http://localhost:5173', // Your React frontend URL
+    origin: function(origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, etc.)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Handle preflight requests
-app.options('*', cors());
-
+// Handle preflight requests - REMOVE the app.options('*', cors()) line
+// Instead, let the cors middleware handle OPTIONS automatically
 app.use(helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false
